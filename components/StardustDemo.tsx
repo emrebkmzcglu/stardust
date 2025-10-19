@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sun, Moon, Star, Sparkles, Bell, Copy } from "lucide-react";
+import { p } from "framer-motion/client";
 
 const strings = {
   en: { title:"Stardust — Daily Horoscope", subtitle:"Personalized, friendly, and a little magical.", selectSign:"Select your sign", today:"Today's Horoscope", generate:"Generate", luckyColor:"Lucky color", luckyNumber:"Lucky number", mood:"Mood", love:"Love", career:"Career", health:"Health", language:"Language", reminders:"Daily reminder", upgrade:"Upgrade", paywallCopy:"Ad-free + weekly outlook + compatibility.", subscribe:"Start 1-day free trial", priceLine:"$2.99/week after trial", copy:"Copy", copied:"Copied!" },
@@ -35,16 +36,21 @@ function ProgressBar({value}:{value:number}){return(<div className="w-full h-2 b
 
 export default function StardustDemo(){
   const [lang,setLang]=useState<"tr"|"en">("tr"); const t=strings[lang];
+  const [name, setName] = useState("");
+const [editingName, setEditingName] = useState(false);
+
   useEffect(() => {
-  try {
-    const saved = localStorage.getItem("stardust_lang");
-    if (saved === "tr" || saved === "en") setLang(saved);
+   try {
+    const saved = localStorage.getItem("stardust_name");
+    if (saved) setName(saved);
   } catch {}
 }, []);
 
 useEffect(() => {
-  try { localStorage.setItem("stardust_lang", lang); } catch {}
-}, [lang]);
+   try {
+    localStorage.setItem("stardust_name", name);
+  } catch {}
+}, [name]);
   const [sign,setSign]=useState("aquarius"); const [copied,setCopied]=useState(false);
   const reading=useMemo(()=>generateReading(sign,lang),[sign,lang]);
   const [name, setName] = useState("");
@@ -131,4 +137,33 @@ useEffect(() => {
       </div>
     </div>
   </div>);
-}
+}editingName ? (
+  <div className="mt-2 flex items-center gap-2">
+    <input
+      autoFocus
+      value={name}
+      onChange={(e)=>setName(e.target.value)}
+      placeholder={lang==="tr"?"İsmin":"Your name"}
+      className="border rounded-md px-2 py-1"
+    />
+    <button
+      onClick={()=>setEditingName(false)}
+      className="border rounded-md px-2 py-1 hover:bg-gray-100"
+    >
+      {lang==="tr"?"Kaydet":"Save"}
+    </button>
+  </div>
+) : (
+  <p className="text-sm text-gray-500 mt-1">
+    {p
+      ? (lang==="tr" ? `Merhaba ${name}!` : `Hi ${name}!`)
+      : (
+        <button
+          onClick={()=>setEditingName(true)}
+          className="underline decoration-dotted hover:no-underline"
+        >
+          {lang==="tr"?"İsmini ekle":"Add your name"}
+        </button>
+      )
+    }
+  </p>
