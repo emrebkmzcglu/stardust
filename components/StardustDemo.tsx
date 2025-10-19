@@ -35,6 +35,16 @@ function ProgressBar({value}:{value:number}){return(<div className="w-full h-2 b
 
 export default function StardustDemo(){
   const [lang,setLang]=useState<"tr"|"en">("tr"); const t=strings[lang];
+  useEffect(() => {
+  try {
+    const saved = localStorage.getItem("stardust_lang");
+    if (saved === "tr" || saved === "en") setLang(saved);
+  } catch {}
+}, []);
+
+useEffect(() => {
+  try { localStorage.setItem("stardust_lang", lang); } catch {}
+}, [lang]);
   const [sign,setSign]=useState("aquarius"); const [copied,setCopied]=useState(false);
   const reading=useMemo(()=>generateReading(sign,lang),[sign,lang]);
   useEffect(()=>{if(!copied)return; const id=setTimeout(()=>setCopied(false),1000); return()=>clearTimeout(id);},[copied]);
