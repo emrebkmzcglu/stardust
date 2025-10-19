@@ -47,9 +47,50 @@ useEffect(() => {
 }, [lang]);
   const [sign,setSign]=useState("aquarius"); const [copied,setCopied]=useState(false);
   const reading=useMemo(()=>generateReading(sign,lang),[sign,lang]);
+  const [name, setName] = useState("");
+const [editingName, setEditingName] = useState(false);
   useEffect(()=>{if(!copied)return; const id=setTimeout(()=>setCopied(false),1000); return()=>clearTimeout(id);},[copied]);
   const copyText=async()=>{const composed=`${t.today}\n\n${reading.text}\n\n${t.luckyColor}: ${reading.luckyColor}\n${t.luckyNumber}: ${reading.luckyNumber}`; try{await navigator.clipboard.writeText(composed); setCopied(true);}catch{}};
-
+useEffect(() => {
+  try {
+    const saved = localStorage.getItem("stardust_name");
+    if (saved) setName(saved);
+  } catch {}
+}, []);
+useEffect(() => {
+  try { localStorage.setItem("stardust_name", name); } catch {}
+}, [name]);
+{editingName ? (
+  <div className="mt-2 flex items-center gap-2">
+    <input
+      autoFocus
+      value={name}
+      onChange={(e)=>setName(e.target.value)}
+      placeholder={lang==="tr"?"İsmin":"Your name"}
+      className="border rounded-md px-2 py-1"
+    />
+    <button
+      onClick={()=>setEditingName(false)}
+      className="border rounded-md px-2 py-1 hover:bg-gray-100"
+    >
+      {lang==="tr"?"Kaydet":"Save"}
+    </button>
+  </div>
+) : (
+  <p className="text-sm text-gray-500 mt-1">
+    {name
+      ? (lang==="tr" ? `Merhaba ${name}!` : `Hi ${name}!`)
+      : (
+        <button
+          onClick={()=>setEditingName(true)}
+          className="underline decoration-dotted hover:no-underline"
+        >
+          {lang==="tr"?"İsmini ekle":"Add your name"}
+        </button>
+      )
+    }
+  </p>
+)}
   return(<div className="min-h-screen bg-gradient-to-b from-white to-gray-50 text-gray-900">
     <div className="max-w-5xl mx-auto p-4 sm:p-8">
       <div className="flex items-center justify-between gap-4 mb-6">
