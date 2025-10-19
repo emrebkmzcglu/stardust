@@ -1,169 +1,311 @@
+
 'use client';
-import React, { useMemo, useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Sun, Moon, Star, Sparkles, Bell, Copy } from "lucide-react";
-import { p } from "framer-motion/client";
+import React, { useEffect, useMemo, useState } from "react";
 
-const strings = {
-  en: { title:"Stardust — Daily Horoscope", subtitle:"Personalized, friendly, and a little magical.", selectSign:"Select your sign", today:"Today's Horoscope", generate:"Generate", luckyColor:"Lucky color", luckyNumber:"Lucky number", mood:"Mood", love:"Love", career:"Career", health:"Health", language:"Language", reminders:"Daily reminder", upgrade:"Upgrade", paywallCopy:"Ad-free + weekly outlook + compatibility.", subscribe:"Start 1-day free trial", priceLine:"$2.99/week after trial", copy:"Copy", copied:"Copied!" },
-  tr: { title:"Stardust — Günlük Burç Yorumu", subtitle:"Kişiselleştirilmiş, samimi ve biraz büyülü.", selectSign:"Burcunu seç", today:"Günün Yorumu", generate:"Oluştur", luckyColor:"Şanslı renk", luckyNumber:"Şanslı sayı", mood:"Mod", love:"Aşk", career:"Kariyer", health:"Sağlık", language:"Dil", reminders:"Günlük hatırlatma", upgrade:"Yükselt", paywallCopy:"Reklamsız + haftalık görünüm + uyumluluk.", subscribe:"1 gün ücretsiz dene", priceLine:"Deneme sonrası haftalık $2.99", copy:"Kopyala", copied:"Kopyalandı!" }
-};
+/**
+ * Stardust – Dark Theme + Enhanced Lucky Section
+ * - Adds dark mode styling
+ * - Adds headings: “Günün Şanslı Rengi” & “Günün Şanslı Sayısı”
+ */
+
+// Sign catalog
 const SIGNS = [
-  { key:"aries", name:{en:"Aries",tr:"Koç"}, emoji:"♈" }, { key:"taurus", name:{en:"Taurus",tr:"Boğa"}, emoji:"♉" },
-  { key:"gemini", name:{en:"Gemini",tr:"İkizler"}, emoji:"♊" }, { key:"cancer", name:{en:"Cancer",tr:"Yengeç"}, emoji:"♋" },
-  { key:"leo", name:{en:"Leo",tr:"Aslan"}, emoji:"♌" }, { key:"virgo", name:{en:"Virgo",tr:"Başak"}, emoji:"♍" },
-  { key:"libra", name:{en:"Libra",tr:"Terazi"}, emoji:"♎" }, { key:"scorpio", name:{en:"Scorpio",tr:"Akrep"}, emoji:"♏" },
-  { key:"sagittarius", name:{en:"Sagittarius",tr:"Yay"}, emoji:"♐" }, { key:"capricorn", name:{en:"Capricorn",tr:"Oğlak"}, emoji:"♑" },
-  { key:"aquarius", name:{en:"Aquarius",tr:"Kova"}, emoji:"♒" }, { key:"pisces", name:{en:"Pisces",tr:"Balık"}, emoji:"♓" },
-];
+  { key: "aries", name: { tr: "Koç", en: "Aries" }, emoji: "♈" },
+  { key: "taurus", name: { tr: "Boğa", en: "Taurus" }, emoji: "♉" },
+  { key: "gemini", name: { tr: "İkizler", en: "Gemini" }, emoji: "♊" },
+  { key: "cancer", name: { tr: "Yengeç", en: "Cancer" }, emoji: "♋" },
+  { key: "leo", name: { tr: "Aslan", en: "Leo" }, emoji: "♌" },
+  { key: "virgo", name: { tr: "Başak", en: "Virgo" }, emoji: "♍" },
+  { key: "libra", name: { tr: "Terazi", en: "Libra" }, emoji: "♎" },
+  { key: "scorpio", name: { tr: "Akrep", en: "Scorpio" }, emoji: "♏" },
+  { key: "sagittarius", name: { tr: "Yay", en: "Sagittarius" }, emoji: "♐" },
+  { key: "capricorn", name: { tr: "Oğlak", en: "Capricorn" }, emoji: "♑" },
+  { key: "aquarius", name: { tr: "Kova", en: "Aquarius" }, emoji: "♒" },
+  { key: "pisces", name: { tr: "Balık", en: "Pisces" }, emoji: "♓" },
+] as const;
 
-function mulberry32(a:number){return function(){let t=(a+=0x6d2b79f5);t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
-const fragments={ en:{ starters:["Your energy is aligning","A subtle shift opens a new lane","Keep your pace steady","Trust the quiet green lights","A small risk blossoms big"], middles:["— say yes to simple wins","; a brief text changes the tone",", organize your space for clarity",", step away from the noise for 20 minutes",", share credit and momentum builds"], endings:["— and your timing lands perfectly.","; patience today is leverage tomorrow.","; your intuition is your best filter.","; you are closer than you think.","; reduce friction, increase flow."], moods:["focused","curious","grounded","optimistic","playful"] },
-  tr:{ starters:["Enerjin hizalanıyor","İnce bir değişim yeni bir yol açıyor","Temponu sabit tut","Sessiz yeşil ışıklara güven","Küçük bir risk büyük çiçek açar"], middles:["— basit zaferlere evet de","; kısa bir mesaj tonu değiştirir",", alanını düzenle zihin açılır",", gürültüden 20 dakika uzaklaş",", paylaşılan kredi ivme getirir"], endings:["— ve zamanlaman tam isabet olur.","; bugünkü sabır yarına kaldıraç olur.","; sezgin en iyi filtredir.","; sandığından daha yakınsın.","; sürtünmeyi azalt, akışı artır."], moods:["odaklı","meraklı","dengeli","iyimser","oyuncu"] } };
-
-function generateReading(signKey:string, lang:"tr"|"en", date=new Date()){
-  const dayStr=`${date.getUTCFullYear()}${String(date.getUTCMonth()+1).padStart(2,"0")}${String(date.getUTCDate()).padStart(2,"0")}`;
-  const signIndex=SIGNS.findIndex(s=>s.key===signKey); const seed=Number(dayStr)+signIndex*1337; const rng=mulberry32(seed);
-  const pack=fragments[lang]; const pick=(arr:string[])=>arr[Math.floor(rng()*arr.length)];
-  const colors={en:["navy","emerald","amber","rose","violet","charcoal","cream"],tr:["lacivert","zümrüt","kehribar","gül","menekşe","kömür","krem"]};
-  const text=`${pick(pack.starters)} ${pick(pack.middles)} ${pick(pack.endings)}`;
-  const luckyNumber=Math.floor(rng()*88)+1; const luckyColor=colors[lang][Math.floor(rng()*colors[lang].length)];
-  const bars=[Math.round(rng()*40+60),Math.round(rng()*40+60),Math.round(rng()*40+60)];
-  return { text, luckyNumber, luckyColor, mood:pick(pack.moods), stats:{love:bars[0],career:bars[1],health:bars[2]} };
+// Simple seeded RNG
+function seededIndex(seed: string, mod: number) {
+  const n = [...seed].reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381);
+  return n % mod;
 }
 
-function ProgressBar({value}:{value:number}){return(<div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden"><div className="h-2 bg-black" style={{width:`${value}%`}}/></div>);}
+function generateReading(sign: string, lang: 'tr' | 'en', name?: string) {
+  const day = new Date();
+  const seed = `${day.toDateString()}:${sign}:${lang}`;
+  const i = seededIndex(seed, 4);
+  const you = name || (lang === 'tr' ? 'Bugün' : 'Today');
 
-export default function StardustDemo(){
-  const [lang,setLang]=useState<"tr"|"en">("tr"); const t=strings[lang];
-  const [name, setName] = useState("");
-const [editingName, setEditingName] = useState(false);
+  const packs = {
+    tr: {
+      energy: [
+        `${you} için güçlü bir enerji hissediliyor, sezgine güven.`,
+        `Bugün sakin kalmak sana avantaj sağlar.`,
+        `Planlarını netleştir, evren seninle iş birliği içinde.`,
+        `Yeniliklere açık ol, şans senden yana olabilir.`
+      ],
+      love: [
+        `Aşkta sürpriz bir mesaj alabilirsin, kalbini açık tut.`,
+        `Birinin ilgisi seni şaşırtabilir.`,
+        `Partnerinle derin bir konuşma yapma zamanı.`,
+        `Sevgi, küçük jestlerde gizli.`
+      ],
+      career: [
+        `Yeni bir fırsat kapıda, hazır ol.`,
+        `Ekip içinde öne çıkıyorsun, liderliği üstlen.`,
+        `Bir proje düşündüğünden daha fazla ilgi görebilir.`,
+        `Dikkatini toplarsan bugünü verimli geçirirsin.`
+      ],
+      health: [
+        `Bol su iç, bedenin enerjiye ihtiyaç duyuyor.`,
+        `Kısa bir yürüyüş bile sana iyi gelir.`,
+        `Ruh halin fiziksel durumunu etkileyebilir, pozitif kal.`,
+        `Dinlenmekten suçluluk duymamalısın.`
+      ],
+      luckyColors: ["gece mavisi", "zümrüt yeşili", "bordo", "mor", "gümüş"],
+      labels: {
+        luckyColor: 'Günün Şanslı Rengi',
+        luckyNumber: 'Günün Şanslı Sayısı',
+      }
+    },
+    en: {
+      energy: [
+        `${you} radiates steady power; trust your instincts.`,
+        `Calmness gives you an edge today.`,
+        `Clarify your plans—the universe syncs with you.`,
+        `Be open to surprises; luck may find you today.`
+      ],
+      love: [
+        `A surprise message could brighten your heart.`,
+        `Someone’s interest may take you by surprise.`,
+        `A deep talk brings emotional clarity.`,
+        `Love hides in small gestures.`
+      ],
+      career: [
+        `A new opportunity knocks—be ready.`,
+        `Your teamwork shines, take quiet leadership.`,
+        `Your idea gains more traction than expected.`,
+        `Stay focused and finish strong.`
+      ],
+      health: [
+        `Hydrate well and move gently.`,
+        `A short walk clears your thoughts.`,
+        `Your mood affects your health—stay upbeat.`,
+        `Rest is not laziness; it’s fuel.`
+      ],
+      luckyColors: ["midnight blue", "emerald", "burgundy", "violet", "silver"],
+      labels: {
+        luckyColor: "Today's Lucky Color",
+        luckyNumber: "Today's Lucky Number",
+      }
+    }
+  } as const;
+
+  const pack = packs[lang];
+  const pick = (arr: readonly string[]) => arr[i % arr.length];
+
+  const luckyNumber = seededIndex(seed + ':n', 99) + 1;
+  const luckyColor = pack.luckyColors[seededIndex(seed + ':c', pack.luckyColors.length)];
+
+  return {
+    energy: pick(pack.energy),
+    love: pick(pack.love),
+    career: pick(pack.career),
+    health: pick(pack.health),
+    luckyNumber,
+    luckyColor,
+    labels: pack.labels,
+  };
+}
+
+export default function StardustDemo() {
+  const [lang, setLang] = useState<'tr' | 'en'>('tr');
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [sign, setSign] = useState('aries');
+  const [onboarding, setOnboarding] = useState(true);
+  const [notifyLucky, setNotifyLucky] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('stardust_notify') === '1';
+  });
 
   useEffect(() => {
-   try {
-    const saved = localStorage.getItem("stardust_name");
-    if (saved) setName(saved);
-  } catch {}
-}, []);
+    const saved = {
+      name: localStorage.getItem('stardust_name') || '',
+      age: localStorage.getItem('stardust_age') || '',
+      sign: localStorage.getItem('stardust_sign') || 'aries',
+      lang: (localStorage.getItem('stardust_lang') as 'tr' | 'en') || 'tr',
+      notify: localStorage.getItem('stardust_notify') === '1'
+    };
+    setName(saved.name);
+    setAge(saved.age);
+    setSign(saved.sign);
+    setLang(saved.lang);
+    setNotifyLucky(saved.notify);
+    setOnboarding(!(saved.name && saved.age));
+  }, []);
 
-useEffect(() => {
-   try {
-    localStorage.setItem("stardust_name", name);
-  } catch {}
-}, [name]);
-  const [sign,setSign]=useState("aquarius"); const [copied,setCopied]=useState(false);
-  const reading=useMemo(()=>generateReading(sign,lang),[sign,lang]);
-  const [name, setName] = useState("");
-const [editingName, setEditingName] = useState(false);
-  useEffect(()=>{if(!copied)return; const id=setTimeout(()=>setCopied(false),1000); return()=>clearTimeout(id);},[copied]);
-  const copyText=async()=>{const composed=`${t.today}\n\n${reading.text}\n\n${t.luckyColor}: ${reading.luckyColor}\n${t.luckyNumber}: ${reading.luckyNumber}`; try{await navigator.clipboard.writeText(composed); setCopied(true);}catch{}};
-useEffect(() => {
-  try {
-    const saved = localStorage.getItem("stardust_name");
-    if (saved) setName(saved);
-  } catch {}
-}, []);
-useEffect(() => {
-  try { localStorage.setItem("stardust_name", name); } catch {}
-}, [name]);
-{editingName ? (
-  <div className="mt-2 flex items-center gap-2">
-    <input
-      autoFocus
-      value={name}
-      onChange={(e)=>setName(e.target.value)}
-      placeholder={lang==="tr"?"İsmin":"Your name"}
-      className="border rounded-md px-2 py-1"
-    />
-    <button
-      onClick={()=>setEditingName(false)}
-      className="border rounded-md px-2 py-1 hover:bg-gray-100"
-    >
-      {lang==="tr"?"Kaydet":"Save"}
-    </button>
-  </div>
-) : (
-  <p className="text-sm text-gray-500 mt-1">
-    {name
-      ? (lang==="tr" ? `Merhaba ${name}!` : `Hi ${name}!`)
-      : (
-        <button
-          onClick={()=>setEditingName(true)}
-          className="underline decoration-dotted hover:no-underline"
-        >
-          {lang==="tr"?"İsmini ekle":"Add your name"}
-        </button>
-      )
-    }
-  </p>
-)}
-  return(<div className="min-h-screen bg-gradient-to-b from-white to-gray-50 text-gray-900">
-    <div className="max-w-5xl mx-auto p-4 sm:p-8">
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3"><motion.div initial={{rotate:-20}} animate={{rotate:0}}><Sparkles className="w-6 h-6"/></motion.div>
-          <div><h1 className="text-2xl sm:text-3xl font-semibold">{t.title}</h1><p className="text-sm text-gray-500">{t.subtitle}</p></div></div>
-        <div className="flex items-center gap-2">
-          <select value={lang} onChange={e=>setLang(e.target.value as "tr"|"en")} className="border rounded-md px-3 py-2"><option value="tr">Türkçe</option><option value="en">English</option></select>
+  useEffect(() => {
+    localStorage.setItem('stardust_name', name);
+    localStorage.setItem('stardust_age', age);
+    localStorage.setItem('stardust_sign', sign);
+    localStorage.setItem('stardust_lang', lang);
+    localStorage.setItem('stardust_notify', notifyLucky ? '1' : '0');
+  }, [name, age, sign, lang, notifyLucky]);
+
+  const reading = useMemo(() => generateReading(sign, lang, name), [sign, lang, name]);
+
+  // Lucky hour (deterministic per day + sign)
+  const luckyHour = useMemo(() => {
+    const day = new Date();
+    const key = `${day.getUTCFullYear()}-${day.getUTCMonth()+1}-${day.getUTCDate()}:${sign}:${lang}`;
+    const hour = 7 + seededIndex(key + ':h', 13); // 07..19
+    const half = seededIndex(key + ':m', 2) === 0 ? 0 : 30; // :00 or :30
+    const label = `${String(hour).padStart(2,'0')}:${half===0?'00':'30'}`;
+    return { hour, minute: half, label };
+  }, [sign, lang]);
+
+  // Schedule notification at lucky hour (today or tomorrow)
+  useEffect(() => {
+    if (!notifyLucky) return;
+    if (typeof window === 'undefined') return;
+    if (!('Notification' in window)) return;
+
+    let timeoutId: number | undefined;
+
+    const schedule = async () => {
+      if (Notification.permission !== 'granted') {
+        const p = await Notification.requestPermission();
+        if (p !== 'granted') return;
+      }
+      const now = new Date();
+      const target = new Date();
+      target.setHours(luckyHour.hour, luckyHour.minute, 0, 0);
+      if (target.getTime() <= now.getTime()) {
+        target.setDate(target.getDate() + 1); // schedule tomorrow
+      }
+      const ms = target.getTime() - now.getTime();
+      timeoutId = window.setTimeout(() => {
+        try {
+          new Notification(lang==='tr' ? 'Şanslı saat!' : 'Lucky hour!', {
+            body: lang==='tr'
+              ? `${SIGNS.find(s=>s.key===sign)?.name.tr} için yorumuna göz at!`
+              : `Check your ${SIGNS.find(s=>s.key===sign)?.name.en} reading!`
+          });
+        } catch {}
+      }, ms);
+    };
+
+    schedule();
+    return () => { if (timeoutId) clearTimeout(timeoutId); };
+  }, [notifyLucky, luckyHour, lang, sign]);
+
+  if (onboarding) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white grid place-items-center p-6">
+        <div className="w-full max-w-md bg-gray-800 rounded-2xl shadow-lg p-6">
+          <h1 className="text-2xl font-semibold mb-1">Stardust</h1>
+          <p className="text-sm text-gray-300 mb-6">{lang === 'tr' ? 'İsmini ve yaşını gir, yıldızlar seni tanısın.' : 'Enter your name and age to unlock your stars.'}</p>
+
+          <label className="text-xs text-gray-400">{lang === 'tr' ? 'İsim' : 'Name'}</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} className="border border-gray-600 bg-gray-900 text-white rounded-md w-full px-3 py-2 mb-3" />
+
+          <label className="text-xs text-gray-400">{lang === 'tr' ? 'Yaş' : 'Age'}</label>
+          <input value={age} onChange={(e) => setAge(e.target.value.replace(/[^0-9]/g, ''))} className="border border-gray-600 bg-gray-900 text-white rounded-md w-full px-3 py-2 mb-4" />
+
+          <button onClick={() => setOnboarding(false)} disabled={!name || !age} className={`w-full rounded-md px-3 py-2 text-white ${!name || !age ? 'bg-gray-600' : 'bg-purple-600 hover:bg-purple-700'}`}>
+            {lang === 'tr' ? 'Devam Et' : 'Continue'}
+          </button>
         </div>
-      </div>
-      <div className="border rounded-2xl p-4 mb-6">
-        <div className="text-lg font-medium mb-3 flex items-center gap-2"><Sun className="w-5 h-5"/> Burcunu seç</div>
-        <div className="flex flex-wrap gap-2 mt-2">{SIGNS.map(s=>(
-          <button key={s.key} onClick={()=>setSign(s.key)} className={`rounded-2xl px-3 py-2 border ${s.key===sign?"bg-black text-white border-black":"bg-white hover:bg-gray-100"}`}>
-            <span className="mr-2">{s.emoji}</span>{s.name[lang]}
-          </button>))}</div>
-      </div>
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 border rounded-2xl p-5 bg-white">
-          <div className="flex items-center justify-between mb-2">
-            <div><div className="text-base font-semibold flex items-center gap-2"><Moon className="w-5 h-5"/> {t.today}</div></div>
-            <div className="flex gap-2"><button onClick={copyText} className="border rounded-md px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100"><Copy className="w-4 h-4"/> {copied?t.copied:t.copy}</button></div>
+      </main>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-gray-100 p-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-white">✨ Stardust</h1>
+          <select
+            value={lang}
+            onChange={(e) => setLang(e.target.value as 'tr' | 'en')}
+            className="bg-gray-800 border border-gray-700 text-white rounded-md px-3 py-2"
+          >
+            <option value="tr">Türkçe</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+
+        {/* Sign Selector */}
+        <div className="border border-gray-700 rounded-2xl p-6 bg-gray-800 mb-8">
+          <p className="text-sm text-gray-400 mb-2">{lang === 'tr' ? 'Burcunu Seç' : 'Select your sign'}</p>
+          <div className="flex flex-wrap gap-2">
+            {SIGNS.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setSign(s.key)}
+                className={`px-3 py-2 rounded-lg border ${s.key === sign ? 'bg-purple-600 text-white border-purple-600' : 'border-gray-600 text-gray-300 hover:bg-gray-700'}`}
+              >
+                {s.emoji} {s.name[lang]}
+              </button>
+            ))}
           </div>
-          <AnimatePresence mode="wait"><motion.p key={reading.text} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} className="text-base leading-relaxed">{reading.text}</motion.p></AnimatePresence>
-          <div className="grid sm:grid-cols-3 gap-4 mt-6">
-            <div><p className="text-xs text-gray-500">Aşk</p><ProgressBar value={reading.stats.love}/></div>
-            <div><p className="text-xs text-gray-500">Kariyer</p><ProgressBar value={reading.stats.career}/></div>
-            <div><p className="text-xs text-gray-500">Sağlık</p><ProgressBar value={reading.stats.health}/></div>
+        </div>
+
+        {/* Content Card */}
+        <div className="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-lg">
+          <h2 className="text-xl font-semibold mb-1">
+            {lang === 'tr'
+              ? `${SIGNS.find(s=>s.key===sign)?.name.tr} — Günlük Yorum`
+              : `${SIGNS.find(s=>s.key===sign)?.name.en} — Daily Reading`}
+          </h2>
+          <p className="text-sm text-gray-400 mb-4">
+            {lang === 'tr' ? `Merhaba ${name}! Yaş: ${age}` : `Hi ${name}! Age: ${age}`}
+          </p>
+
+          <div className="space-y-4 text-[15px] leading-relaxed">
+            <p>{reading.energy}</p>
+            <p><strong>{lang==='tr'?'Aşk':'Love'}:</strong> {reading.love}</p>
+            <p><strong>{lang==='tr'?'Kariyer':'Career'}:</strong> {reading.career}</p>
+            <p><strong>{lang==='tr'?'Sağlık':'Health'}:</strong> {reading.health}</p>
           </div>
+
+          {/* Lucky Section */}
           <div className="mt-6 grid sm:grid-cols-3 gap-4">
-            <div className="border-2 border-dashed rounded-xl p-3"><p className="text-xs text-gray-500">{t.luckyColor}</p><p className="text-lg font-semibold capitalize">{reading.luckyColor}</p></div>
-            <div className="border-2 border-dashed rounded-xl p-3"><p className="text-xs text-gray-500">{t.luckyNumber}</p><p className="text-lg font-semibold">{reading.luckyNumber}</p></div>
-            <div className="border-2 border-dashed rounded-xl p-3"><p className="text-xs text-gray-500">{t.mood}</p><p className="text-lg font-semibold capitalize">{reading.mood}</p></div>
+            <div className="border border-gray-700 rounded-xl p-4 bg-gray-900">
+              <p className="text-xs text-gray-400">{lang==='tr'?'Günün Şanslı Rengi':"Today's Lucky Color"}</p>
+              <div className="mt-2 flex items-center gap-3">
+                <span
+                  className="inline-block w-5 h-5 rounded-full border border-gray-600"
+                  style={{ background: String(reading.luckyColor) }}
+                />
+                <p className="text-lg font-semibold capitalize">{String(reading.luckyColor)}</p>
+              </div>
+            </div>
+
+            <div className="border border-gray-700 rounded-xl p-4 bg-gray-900">
+              <p className="text-xs text-gray-400">{lang==='tr'?'Günün Şanslı Sayısı':"Today's Lucky Number"}</p>
+              <p className="text-lg font-semibold mt-2">{reading.luckyNumber}</p>
+            </div>
+
+            <div className="border border-gray-700 rounded-xl p-4 bg-gray-900">
+              <p className="text-xs text-gray-400">{lang==='tr'?'Günün Şanslı Saati':"Today's Lucky Hour"}</p>
+              <p className="text-lg font-semibold mt-2">{luckyHour.label}</p>
+              <button
+                onClick={() => setNotifyLucky(v=>!v)}
+                className={`mt-3 w-full rounded-md px-3 py-2 border ${notifyLucky? 'bg-purple-600 border-purple-600 text-white' : 'border-gray-600 text-gray-200 hover:bg-gray-800'}`}
+              >
+                {notifyLucky ? (lang==='tr'?'Bildirim açık':'Notifications on') : (lang==='tr'?'Şanslı saatte bildir':'Notify at lucky hour')}
+              </button>
+              {typeof window !== 'undefined' && !("Notification" in window) && (
+                <p className="text-[12px] text-amber-400 mt-2">{lang==='tr'? 'Tarayıcın bildirim desteklemiyor.' : 'Your browser does not support notifications.'}</p>
+              )}
+            </div>
           </div>
         </div>
-        <div className="space-y-6">
-          <div className="border rounded-2xl p-5 bg-white"><div className="text-base font-semibold mb-1 flex items-center gap-2"><Bell className="w-4 h-4"/> Günlük hatırlatma</div><button className="w-full border rounded-md px-3 py-2 hover:bg-gray-100">Enable</button></div>
-        </div>
+        {/* END content card */}
       </div>
     </div>
-  </div>);
-}editingName ? (
-  <div className="mt-2 flex items-center gap-2">
-    <input
-      autoFocus
-      value={name}
-      onChange={(e)=>setName(e.target.value)}
-      placeholder={lang==="tr"?"İsmin":"Your name"}
-      className="border rounded-md px-2 py-1"
-    />
-    <button
-      onClick={()=>setEditingName(false)}
-      className="border rounded-md px-2 py-1 hover:bg-gray-100"
-    >
-      {lang==="tr"?"Kaydet":"Save"}
-    </button>
-  </div>
-) : (
-  <p className="text-sm text-gray-500 mt-1">
-    {p
-      ? (lang==="tr" ? `Merhaba ${name}!` : `Hi ${name}!`)
-      : (
-        <button
-          onClick={()=>setEditingName(true)}
-          className="underline decoration-dotted hover:no-underline"
-        >
-          {lang==="tr"?"İsmini ekle":"Add your name"}
-        </button>
-      )
-    }
-  </p>
+  );
+}
